@@ -90,12 +90,10 @@
   }
 
   function handlePrintBlocked(reason) {
-    storage.addHistory({
-      type: 'blocked',
-      action: '证件打印被拦截',
-      attendee: attendeeName,
-      reason: reason
-    })
+    if (reason === '__openHistory__') {
+      showHistory = true
+      return
+    }
   }
 
   function resetFlow() {

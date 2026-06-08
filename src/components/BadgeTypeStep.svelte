@@ -65,6 +65,13 @@
 
     if (forceFail) {
       failMessage = `证件类型「${selected.name}」库存不足，当前剩余 0 张，请选择其他证件类型或联系管理员补充库存。`
+      storage.addHistory({
+        type: 'blocked',
+        action: '证件类型分配失败',
+        attendee: attendee,
+        reason: `证件类型「${selected.name}」库存不足`,
+        badgeType: selected.name
+      })
       return
     }
 

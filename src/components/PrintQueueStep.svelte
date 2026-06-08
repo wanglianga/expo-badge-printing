@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { storage } from '../lib/storage.js'
 
   const dispatch = createEventDispatcher()
@@ -10,6 +10,7 @@
   let printSuccess = false
   let queueItem = null
   let showBlacklistConfirm = false
+  let hasAutoLoggedBlocked = false
 
   $: errors = validationResult?.errors || []
   $: warnings = validationResult?.warnings || []
@@ -22,6 +23,23 @@
     : null
 
   $: canPrint = validationResult?.valid && !isPrinting && !printSuccess
+
+  $: if (hasBlacklistError && !hasAutoLoggedBlocked) {
+    hasAutoLoggedBlocked = true
+    const reason = '黑名单拦截：缺少重复入场权限'
+    storage.addHistory({
+      type: 'blocked',
+      action: '证件打印被拦截',
+      attendee: data.attendeeName,
+      reason: reason,
+      badgeType: data.badgeType?.name
+    })
+    dispatch('blocked', reason)
+  }
+
+  onMount(() => {
+    hasAutoLoggedBlocked = false
+  })
 
   function confirmBlacklist() {
     showBlacklistConfirm = true
@@ -95,14 +113,18 @@
       <div class="error-list">
         {#each errors as error, i}
           <div class="error-item">
-            <span class="error-num">{i + 1}</span>
-            <span>{typeof error === 'string' ? error : error.message}</span>
-          </div>
-        {/each}
+          <span class="error-num">{i + 1}</span>
+          <span>{typeof error === 'string' ? error : error.message}</span>
+        </div>
+      {/each}
       </div>
       {#if hasBlacklistError}
-        <button class="btn-danger" on:click={handleBlocked}>
-          记录为黑名单拦截事件
+        <div class="auto-logged-info">
+          <span>📝</span>
+          <p>该拦截事件已<strong>自动记录</strong>至操作历史，可在右侧历史面板查看</p>
+        </div>
+        <button class="btn-secondary" on:click={() => dispatch('blocked', '__openHistory__')}>
+          打开历史记录面板
         </button>
       {/if}
     </div>
@@ -360,6 +382,23 @@
     justify-content: center;
     font-size: 12px;
     font-weight: 700;
+  }
+
+  .auto-logged-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: white;
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #166534;
+    margin-bottom: 14px;
+  }
+
+  .auto-logged-info span {
+    flex-shrink: 0;
   }
 
   .warning-section {

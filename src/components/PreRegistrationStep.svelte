@@ -17,7 +17,7 @@
     phone: '',
     email: '',
     idCard: '',
-    repeatedEntry: false,
+    repeatedEntry: null,
     notes: ''
   }
 
@@ -69,7 +69,7 @@
         phone: record.phone || '',
         email: record.email || '',
         idCard: record.idCard || '',
-        repeatedEntry: record.repeatedEntry === true,
+        repeatedEntry: record.repeatedEntry === true || record.repeatedEntry === false ? record.repeatedEntry : null,
         notes: record.notes || ''
       }
     } else {
@@ -80,7 +80,7 @@
         phone: '',
         email: '',
         idCard: '',
-        repeatedEntry: false,
+        repeatedEntry: null,
         notes: ''
       }
     }
@@ -104,6 +104,9 @@
     if (!formData.phone.trim()) errors.phone = '请输入手机号'
     else if (!/^1[3-9]\d{9}$/.test(formData.phone.replace(/\*/g, '0')) && !formData.phone.includes('*')) {
       errors.phone = '手机号格式不正确'
+    }
+    if (formData.repeatedEntry !== true && formData.repeatedEntry !== false) {
+      errors.repeatedEntry = '请明确配置重复入场权限（开启或关闭）'
     }
     return Object.keys(errors).length === 0
   }
@@ -329,23 +332,34 @@
           <span class="section-icon">🔐</span>
           权限配置
         </h3>
-        <div class="permission-card">
+        <div class="permission-card {errors.repeatedEntry ? 'permission-error' : ''}">
           <div class="permission-item">
             <div class="permission-info">
-              <div class="permission-title">重复入场权限</div>
-              <div class="permission-desc">开启后可多次进出展馆，同时影响黑名单校验规则</div>
+              <div class="permission-title">重复入场权限 <span class="required">*</span></div>
+              <div class="permission-desc">开启后可多次进出展馆，同时影响黑名单校验规则。<strong>必须明确选择开启或关闭。</strong></div>
             </div>
-            <label class="switch {formData.repeatedEntry ? 'active' : ''}">
+            <label class="switch {formData.repeatedEntry === true ? 'active' : ''} {formData.repeatedEntry === null ? 'inactive' : ''}">
               <input type="checkbox" bind:checked={formData.repeatedEntry} />
               <span class="slider"></span>
             </label>
           </div>
-          {#if !formData.repeatedEntry}
+          {#if formData.repeatedEntry === null}
+            <div class="permission-warning permission-neutral">
+              <span>❓</span>
+              <p>请选择是否开启重复入场权限</p>
+            </div>
+          {:else if !formData.repeatedEntry}
             <div class="permission-warning">
               <span>⚠️</span>
               <p>未开启重复入场：若观众在黑名单中，将<strong>无法</strong>生成证件</p>
             </div>
+          {:else}
+            <div class="permission-info-inline">
+              <span>✅</span>
+              <p>已开启重复入场：黑名单观众可二次确认后继续</p>
+            </div>
           {/if}
+          {#if errors.repeatedEntry}<span class="field-error field-error-block">{errors.repeatedEntry}</span>{/if}
         </div>
       </div>
 
@@ -730,6 +744,20 @@
     padding: 20px;
   }
 
+  .permission-card.permission-error {
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+
+  .switch.inactive .slider {
+    background: #e2e8f0;
+    box-shadow: inset 0 0 0 2px #cbd5e1;
+  }
+
+  .switch.inactive .slider::before {
+    background: #f8fafc;
+  }
+
   .permission-item {
     display: flex;
     align-items: center;
@@ -811,6 +839,34 @@
 
   .permission-warning span {
     flex-shrink: 0;
+  }
+
+  .permission-warning.permission-neutral {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+  }
+
+  .permission-info-inline {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    color: #166534;
+  }
+
+  .permission-info-inline span {
+    flex-shrink: 0;
+  }
+
+  .field-error-block {
+    display: block;
+    margin-top: 12px;
   }
 
   .form-actions {

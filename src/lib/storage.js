@@ -278,13 +278,17 @@ export function validateFlow(flowData) {
   }
 
   if (flowData.preRegistration) {
-    if (flowData.preRegistration.repeatedEntry === false || flowData.preRegistration.repeatedEntry === undefined) {
+    if (flowData.preRegistration.repeatedEntry === undefined || flowData.preRegistration.repeatedEntry === null) {
+      errors.push('重复入场权限缺失，请返回第一步明确配置是否开启重复入场')
+    } else if (flowData.preRegistration.repeatedEntry === false) {
       warnings.push('该观众未配置重复入场权限，黑名单校验将不可跳过')
     }
   }
 
   if (flowData.onsiteData) {
-    if (!flowData.onsiteData.repeatedEntry) {
+    if (flowData.onsiteData.repeatedEntry === undefined || flowData.onsiteData.repeatedEntry === null) {
+      errors.push('重复入场权限缺失，请返回第一步明确配置是否开启重复入场')
+    } else if (!flowData.onsiteData.repeatedEntry) {
       warnings.push('现场补录未开启重复入场，黑名单校验将严格执行')
     }
   }
