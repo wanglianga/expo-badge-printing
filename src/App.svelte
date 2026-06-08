@@ -3,17 +3,15 @@
   import { storage, validateFlow } from './lib/storage.js'
   import Stepper from './components/Stepper.svelte'
   import PreRegistrationStep from './components/PreRegistrationStep.svelte'
-  import OnsiteStep from './components/OnsiteStep.svelte'
   import BadgeTypeStep from './components/BadgeTypeStep.svelte'
   import PrintQueueStep from './components/PrintQueueStep.svelte'
   import Header from './components/Header.svelte'
   import HistoryPanel from './components/HistoryPanel.svelte'
 
   const STEPS = [
-    { id: 1, title: '预登记查询', subtitle: '查找已注册观众', icon: '📋' },
-    { id: 2, title: '现场补录', subtitle: '完善或新增信息', icon: '✏️' },
-    { id: 3, title: '证件类型', subtitle: '选择证件种类', icon: '🎫' },
-    { id: 4, title: '打印队列', subtitle: '确认并输出', icon: '🖨️' }
+    { id: 1, title: '预登记与信息', subtitle: '选择或补录观众信息', icon: '📋' },
+    { id: 2, title: '证件类型', subtitle: '选择证件种类', icon: '🎫' },
+    { id: 3, title: '打印队列', subtitle: '确认并输出证件', icon: '🖨️' }
   ]
 
   let currentStep = 1
@@ -34,7 +32,7 @@
     storage.ensureDemoHistory()
     const saved = storage.getCurrentFlow()
     if (saved && saved.step) {
-      currentStep = saved.step
+      currentStep = saved.step > 3 ? 1 : saved.step
       flowData = saved.data || flowData
     }
   })
@@ -52,58 +50,13 @@
     badgeTypeResetKey++
   }
 
-  function syncOnsiteToPre(data) {
-    if (flowData.preRegistration) {
-      flowData.preRegistration = {
-        ...flowData.preRegistration,
-        name: data.name,
-        company: data.company,
-        title: data.title,
-        phone: data.phone,
-        email: data.email,
-        idCard: data.idCard,
-        repeatedEntry: data.repeatedEntry,
-        notes: data.notes
-      }
-    }
-  }
-
-  function handlePreRegistrationSelected(record) {
+  function handleStep1Complete(result) {
     resetBadgeTypeFlags()
-    if (record === null) {
-      flowData.preRegistration = null
-      flowData.onsiteData = null
-    } else {
-      flowData.preRegistration = { ...record }
-      flowData.onsiteData = null
-    }
+    flowData.preRegistration = result.preRegistration
+    flowData.onsiteData = result.onsiteData
     flowData.badgeType = null
     validationResult = null
     currentStep = 2
-    saveFlow()
-  }
-
-  function handleOnsiteComplete(data) {
-    flowData.onsiteData = { ...data }
-    if (!flowData.preRegistration) {
-      flowData.preRegistration = {
-        name: data.name,
-        company: data.company,
-        title: data.title,
-        phone: data.phone,
-        email: data.email,
-        idCard: data.idCard,
-        repeatedEntry: data.repeatedEntry,
-        notes: data.notes,
-        status: 'onsite'
-      }
-    } else {
-      syncOnsiteToPre(data)
-    }
-    flowData.badgeType = null
-    validationResult = null
-    resetBadgeTypeFlags()
-    currentStep = 3
     saveFlow()
   }
 
@@ -111,11 +64,16 @@
     flowData.badgeType = type
     validationResult = validateFlow({ ...flowData, attendeeName })
     resetBadgeTypeFlags()
-    currentStep = 4
+    currentStep = 3
     saveFlow()
   }
 
   function handleBackFromBadgeType() {
+    resetBadgeTypeFlags()
+    currentStep = 1
+  }
+
+  function handleBackFromPrintQueue() {
     resetBadgeTypeFlags()
     currentStep = 2
   }
@@ -167,7 +125,19 @@
     if (scenario === 'pre-register-demo') {
       const demo = storage.getPreRegistrations()[0]
       if (demo) {
-        handlePreRegistrationSelected(demo)
+        handleStep1Complete({
+          preRegistration: { ...demo },
+          onsiteData: {
+            name: demo.name,
+            company: demo.company,
+            title: demo.title,
+            phone: demo.phone,
+            email: demo.email,
+            idCard: demo.idCard || '',
+            repeatedEntry: demo.repeatedEntry === true,
+            notes: ''
+          }
+        })
       }
       return
     }
@@ -190,7 +160,7 @@
       validationResult = null
       badgeTypeAutoFail = true
       badgeTypeAutoSelect = demo.badgeType || null
-      currentStep = 3
+      currentStep = 2
       saveFlow()
       return
     }
@@ -212,12 +182,12 @@
           notes: ''
         }
         const badgeTypes = storage.getBadgeTypes()
-        flowData.badgeType = badgeTypes.find(b => b.id === (demo.badgeType || 'onsite')) || badgeTypes[0]
+        flowData.badgeType = badgeTypes.find(b => b.id === (demo.badgeType || 'normal')) || badgeTypes[0]
         validationResult = validateFlow({
           ...flowData,
           attendeeName: demo.name
         })
-        currentStep = 4
+        currentStep = 3
         saveFlow()
       }
       showHistory = true
@@ -237,15 +207,9 @@
         {#if currentStep === 1}
           <PreRegistrationStep
             {flowData}
-            on:select={e => handlePreRegistrationSelected(e.detail)}
+            on:complete={e => handleStep1Complete(e.detail)}
           />
         {:else if currentStep === 2}
-          <OnsiteStep
-            {flowData}
-            on:complete={e => handleOnsiteComplete(e.detail)}
-            on:back={goBack}
-          />
-        {:else if currentStep === 3}
           <BadgeTypeStep
             {flowData}
             autoFail={badgeTypeAutoFail}
@@ -254,13 +218,13 @@
             on:select={e => handleBadgeTypeSelected(e.detail)}
             on:back={handleBackFromBadgeType}
           />
-        {:else if currentStep === 4}
+        {:else if currentStep === 3}
           <PrintQueueStep
             data={combinedData}
             {validationResult}
             on:success={e => handlePrintSuccess(e.detail)}
             on:blocked={e => handlePrintBlocked(e.detail)}
-            on:back={() => { resetBadgeTypeFlags(); currentStep = 3 }}
+            on:back={handleBackFromPrintQueue}
             on:reset={resetFlow}
           />
         {/if}

@@ -1,17 +1,16 @@
 const STORAGE_KEYS = {
-  PRE_REGISTRATIONS: 'expo_pre_registrations',
-  ONSITE_RECORDS: 'expo_onsite_records',
-  BADGE_TYPES: 'expo_badge_types',
-  PRINT_QUEUE: 'expo_print_queue',
-  BLACKLIST: 'expo_blacklist',
-  HISTORY: 'expo_history',
-  CURRENT_FLOW: 'expo_current_flow'
+  PRE_REGISTRATIONS: 'expo_pre_registrations_v2',
+  ONSITE_RECORDS: 'expo_onsite_records_v2',
+  BADGE_TYPES: 'expo_badge_types_v2',
+  PRINT_QUEUE: 'expo_print_queue_v2',
+  BLACKLIST: 'expo_blacklist_v2',
+  HISTORY: 'expo_history_v2',
+  CURRENT_FLOW: 'expo_current_flow_v2'
 }
 
 const DEFAULT_BADGE_TYPES = [
+  { id: 'normal', name: '普通观众证', color: '#3b82f6', icon: '🎫', description: '标准观众证件' },
   { id: 'vip', name: 'VIP贵宾证', color: '#f59e0b', icon: '👑', description: '高级别嘉宾专属证件' },
-  { id: 'professional', name: '专业观众证', color: '#3b82f6', icon: '🎫', description: '预登记专业观众' },
-  { id: 'onsite', name: '现场观众证', color: '#10b981', icon: '📋', description: '现场注册观众' },
   { id: 'media', name: '媒体证', color: '#8b5cf6', icon: '📷', description: '新闻媒体人员' },
   { id: 'exhibitor', name: '参展商证', color: '#ef4444', icon: '🏪', description: '参展企业人员' }
 ]
@@ -25,7 +24,7 @@ const DEMO_PRE_REGISTRATIONS = [
     phone: '138****5678',
     email: 'zhangmy@huachuang.com',
     registeredAt: '2026-05-20 14:30:00',
-    badgeType: 'professional',
+    badgeType: 'normal',
     repeatedEntry: true,
     status: 'approved'
   },
@@ -61,7 +60,7 @@ const DEMO_PRE_REGISTRATIONS = [
     phone: '135****0001',
     email: '',
     registeredAt: '2026-05-10 09:00:00',
-    badgeType: 'onsite',
+    badgeType: 'normal',
     repeatedEntry: false,
     status: 'approved'
   },
@@ -73,7 +72,7 @@ const DEMO_PRE_REGISTRATIONS = [
     phone: '136****0002',
     email: '',
     registeredAt: '2026-05-12 11:20:00',
-    badgeType: 'onsite',
+    badgeType: 'normal',
     repeatedEntry: false,
     status: 'approved'
   }
