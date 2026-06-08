@@ -25,9 +25,13 @@
   }
   let validationResult = null
   let showHistory = false
+  let badgeTypeAutoFail = false
+  let badgeTypeAutoSelect = null
+  let badgeTypeResetKey = 0
 
   onMount(() => {
     storage.initDefaults()
+    storage.ensureDemoHistory()
     const saved = storage.getCurrentFlow()
     if (saved && saved.step) {
       currentStep = saved.step
@@ -42,20 +46,45 @@
     storage.saveCurrentFlow({ step: currentStep, data: flowData })
   }
 
-  function goToStep(step) {
-    currentStep = step
-    saveFlow()
+  function resetBadgeTypeFlags() {
+    badgeTypeAutoFail = false
+    badgeTypeAutoSelect = null
+    badgeTypeResetKey++
+  }
+
+  function syncOnsiteToPre(data) {
+    if (flowData.preRegistration) {
+      flowData.preRegistration = {
+        ...flowData.preRegistration,
+        name: data.name,
+        company: data.company,
+        title: data.title,
+        phone: data.phone,
+        email: data.email,
+        idCard: data.idCard,
+        repeatedEntry: data.repeatedEntry,
+        notes: data.notes
+      }
+    }
   }
 
   function handlePreRegistrationSelected(record) {
-    flowData.preRegistration = record
-    flowData.onsiteData = null
+    resetBadgeTypeFlags()
+    if (record === null) {
+      flowData.preRegistration = null
+      flowData.onsiteData = null
+    } else {
+      flowData.preRegistration = { ...record }
+      flowData.onsiteData = null
+    }
+    flowData.badgeType = null
+    validationResult = null
     currentStep = 2
     saveFlow()
   }
 
   function handleOnsiteComplete(data) {
-    flowData.onsiteData = data
+    flowData.onsiteData = { ...data }
     if (!flowData.preRegistration) {
       flowData.preRegistration = {
         name: data.name,
@@ -63,10 +92,17 @@
         title: data.title,
         phone: data.phone,
         email: data.email,
+        idCard: data.idCard,
         repeatedEntry: data.repeatedEntry,
+        notes: data.notes,
         status: 'onsite'
       }
+    } else {
+      syncOnsiteToPre(data)
     }
+    flowData.badgeType = null
+    validationResult = null
+    resetBadgeTypeFlags()
     currentStep = 3
     saveFlow()
   }
@@ -74,11 +110,13 @@
   function handleBadgeTypeSelected(type) {
     flowData.badgeType = type
     validationResult = validateFlow({ ...flowData, attendeeName })
+    resetBadgeTypeFlags()
     currentStep = 4
     saveFlow()
   }
 
   function handleBackFromBadgeType() {
+    resetBadgeTypeFlags()
     currentStep = 2
   }
 
@@ -110,12 +148,14 @@
       attendeeName: ''
     }
     validationResult = null
+    resetBadgeTypeFlags()
     currentStep = 1
     storage.clearCurrentFlow()
   }
 
   function goBack() {
     if (currentStep > 1) {
+      resetBadgeTypeFlags()
       currentStep--
       saveFlow()
     }
@@ -123,18 +163,65 @@
 
   function triggerDemoScenario(scenario) {
     resetFlow()
+
     if (scenario === 'pre-register-demo') {
       const demo = storage.getPreRegistrations()[0]
       if (demo) {
         handlePreRegistrationSelected(demo)
       }
-    } else if (scenario === 'badge-type-fail') {
+      return
+    }
+
+    if (scenario === 'badge-type-fail') {
       const demo = storage.getPreRegistrations()[2]
-      if (demo) {
-        handlePreRegistrationSelected(demo)
+      if (!demo) return
+      flowData.preRegistration = { ...demo }
+      flowData.onsiteData = {
+        name: demo.name,
+        company: demo.company,
+        title: demo.title,
+        phone: demo.phone,
+        email: demo.email,
+        idCard: demo.idCard || '',
+        repeatedEntry: demo.repeatedEntry === true,
+        notes: ''
       }
-    } else if (scenario === 'blacklist-history') {
+      flowData.badgeType = null
+      validationResult = null
+      badgeTypeAutoFail = true
+      badgeTypeAutoSelect = demo.badgeType || null
+      currentStep = 3
+      saveFlow()
+      return
+    }
+
+    if (scenario === 'blacklist-history') {
+      storage.ensureDemoHistory()
+      const blacklisted = storage.getBlacklistedPreRegistrations()
+      const demo = blacklisted[0] || storage.getPreRegistrations()[3]
+      if (demo) {
+        flowData.preRegistration = { ...demo, repeatedEntry: false }
+        flowData.onsiteData = {
+          name: demo.name,
+          company: demo.company,
+          title: demo.title,
+          phone: demo.phone,
+          email: demo.email,
+          idCard: demo.idCard || '',
+          repeatedEntry: false,
+          notes: ''
+        }
+        const badgeTypes = storage.getBadgeTypes()
+        flowData.badgeType = badgeTypes.find(b => b.id === (demo.badgeType || 'onsite')) || badgeTypes[0]
+        validationResult = validateFlow({
+          ...flowData,
+          attendeeName: demo.name
+        })
+        currentStep = 4
+        saveFlow()
+      }
       showHistory = true
+      return
     }
   }
 </script>
@@ -161,6 +248,9 @@
         {:else if currentStep === 3}
           <BadgeTypeStep
             {flowData}
+            autoFail={badgeTypeAutoFail}
+            autoSelect={badgeTypeAutoSelect}
+            resetKey={badgeTypeResetKey}
             on:select={e => handleBadgeTypeSelected(e.detail)}
             on:back={handleBackFromBadgeType}
           />
@@ -170,7 +260,7 @@
             {validationResult}
             on:success={e => handlePrintSuccess(e.detail)}
             on:blocked={e => handlePrintBlocked(e.detail)}
-            on:back={() => currentStep = 3}
+            on:back={() => { resetBadgeTypeFlags(); currentStep = 3 }}
             on:reset={resetFlow}
           />
         {/if}

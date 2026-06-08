@@ -4,11 +4,15 @@
 
   const dispatch = createEventDispatcher()
   export let flowData
+  export let autoFail = false
+  export let autoSelect = null
+  export let resetKey = 0
 
   let badgeTypes = []
   let selectedId = null
   let forceFail = false
   let failMessage = ''
+  let lastResetKey = -1
 
   onMount(() => {
     badgeTypes = storage.getBadgeTypes()
@@ -19,6 +23,37 @@
 
   $: attendee = flowData.preRegistration?.name || flowData.onsiteData?.name || '该观众'
   $: currentBadgeType = flowData.preRegistration?.badgeType || flowData.onsiteData?.badgeType || null
+
+  $: if (resetKey !== lastResetKey) {
+    lastResetKey = resetKey
+    forceFail = false
+    failMessage = ''
+    if (flowData.badgeType) {
+      selectedId = flowData.badgeType.id
+    } else {
+      selectedId = null
+    }
+  }
+
+  $: if ((autoFail || autoSelect) && badgeTypes.length > 0 && resetKey === lastResetKey && !selectedId && !forceFail) {
+    let target = null
+    if (autoSelect) {
+      target = badgeTypes.find(b => b.id === autoSelect)
+    }
+    if (!target && currentBadgeType) {
+      target = badgeTypes.find(b => b.id === currentBadgeType)
+    }
+    if (!target) {
+      target = badgeTypes[0]
+    }
+    if (target) {
+      selectedId = target.id
+      if (autoFail) {
+        forceFail = true
+        failMessage = `证件类型「${target.name}」库存不足，当前剩余 0 张，请选择其他证件类型或联系管理员补充库存。`
+      }
+    }
+  }
 
   function selectType(type) {
     selectedId = type.id

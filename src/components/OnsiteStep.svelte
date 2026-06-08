@@ -16,24 +16,35 @@
   }
 
   let errors = {}
+  let initialized = false
 
-  onMount(() => {
+  function buildFormData() {
     if (flowData.preRegistration) {
       const p = flowData.preRegistration
-      formData = {
+      return {
         name: p.name || '',
         company: p.company || '',
         title: p.title || '',
         phone: p.phone || '',
         email: p.email || '',
-        idCard: '',
-        repeatedEntry: p.repeatedEntry || false,
-        notes: ''
+        idCard: p.idCard || '',
+        repeatedEntry: p.repeatedEntry === true,
+        notes: p.notes || ''
       }
     } else if (flowData.onsiteData) {
-      formData = { ...flowData.onsiteData }
+      return { ...flowData.onsiteData }
     }
-  })
+    return formData
+  }
+
+  $: if (flowData.preRegistration || flowData.onsiteData) {
+    const next = buildFormData()
+    const changed = Object.keys(next).some(k => next[k] !== formData[k])
+    if (changed || !initialized) {
+      formData = next
+      initialized = true
+    }
+  }
 
   function validate() {
     errors = {}

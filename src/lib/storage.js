@@ -52,6 +52,30 @@ const DEMO_PRE_REGISTRATIONS = [
     badgeType: 'media',
     repeatedEntry: false,
     status: 'pending'
+  },
+  {
+    id: 'PRE20260004',
+    name: '赵某某',
+    company: '未知',
+    title: '—',
+    phone: '135****0001',
+    email: '',
+    registeredAt: '2026-05-10 09:00:00',
+    badgeType: 'onsite',
+    repeatedEntry: false,
+    status: 'approved'
+  },
+  {
+    id: 'PRE20260005',
+    name: '钱某某',
+    company: '未知',
+    title: '—',
+    phone: '136****0002',
+    email: '',
+    registeredAt: '2026-05-12 11:20:00',
+    badgeType: 'onsite',
+    repeatedEntry: false,
+    status: 'approved'
   }
 ]
 
@@ -205,6 +229,39 @@ export const storage = {
 
   getCurrentFlow() {
     return getStorage(STORAGE_KEYS.CURRENT_FLOW, null)
+  },
+
+  getBlacklistedPreRegistrations() {
+    const blacklistNames = this.getBlacklist().map(b => b.name)
+    return this.getPreRegistrations().filter(r => blacklistNames.includes(r.name))
+  },
+
+  ensureDemoHistory() {
+    const history = this.getHistory()
+    if (history.length === 0) {
+      const now = new Date()
+      const t1 = new Date(now.getTime() - 3600 * 1000 * 2).toLocaleString('zh-CN')
+      const t2 = new Date(now.getTime() - 3600 * 1000 * 1).toLocaleString('zh-CN')
+      const seed = [
+        {
+          id: 'H_seed_1',
+          type: 'blocked',
+          action: '证件打印被拦截',
+          attendee: '赵某某',
+          reason: '黑名单拦截：缺少重复入场权限',
+          createdAt: t1
+        },
+        {
+          id: 'H_seed_2',
+          type: 'blocked',
+          action: '证件打印被拦截',
+          attendee: '钱某某',
+          reason: '黑名单拦截：缺少重复入场权限',
+          createdAt: t2
+        }
+      ]
+      setStorage(STORAGE_KEYS.HISTORY, seed)
+    }
   },
 
   resetAll() {
